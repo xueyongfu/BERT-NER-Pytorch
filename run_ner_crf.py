@@ -4,6 +4,7 @@ import logging
 import os
 import json
 import time
+from tensorboardX import SummaryWriter
 
 import torch
 import torch.nn as nn
@@ -332,6 +333,8 @@ def load_and_cache_examples(args, task, tokenizer, data_type='train'):
     return dataset
 
 def main():
+    writer = SummaryWriter(comment='bert', log_dir='./outputs')
+
     parser = argparse.ArgumentParser()
 
     # Required parameters
@@ -486,6 +489,9 @@ def main():
     model = model_class.from_pretrained(args.model_name_or_path,from_tf=bool(".ckpt" in args.model_name_or_path),
                                         config=config,cache_dir=args.cache_dir if args.cache_dir else None,
                                         label2id=args.label2id,device=args.device)
+    # 模型可视化
+    # writer.add_graph(model,(torch.rand(1,20).long(),torch.rand(1,20).long(),torch.rand(1,20).long()))
+
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 

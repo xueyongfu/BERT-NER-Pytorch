@@ -1,7 +1,7 @@
 CURRENT_DIR=`pwd`
-export BERT_BASE_DIR=$CURRENT_DIR/prev_trained_model/bert-base
-export GLUE_DIR=$CURRENT_DIR/datasets
-export OUTPUR_DIR=$CURRENT_DIR/outputs
+export BERT_BASE_DIR=''
+export GLUE_DIR=''
+export OUTPUR_DIR=''
 TASK_NAME="cluener"
 
 python run_ner_crf.py \

@@ -335,15 +335,15 @@ def main():
     parser = argparse.ArgumentParser()
 
     # Required parameters
-    parser.add_argument("--task_name", default=None, type=str, required=True,
+    parser.add_argument("--task_name", default=None, type=str,
                         help="The name of the task to train selected in the list: " + ", ".join(processors.keys()))
-    parser.add_argument("--data_dir",default=None,type=str,required=True,
+    parser.add_argument("--data_dir",default=None,type=str,
                         help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",)
-    parser.add_argument("--model_type",default=None,type=str,required=True,
+    parser.add_argument("--model_type",default=None,type=str,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()),)
-    parser.add_argument("--model_name_or_path",default=None,type=str,required=True,
+    parser.add_argument("--model_name_or_path",default=None,type=str,
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS),)
-    parser.add_argument("--output_dir",default=None,type=str, required=True,
+    parser.add_argument("--output_dir",default=None,type=str,
                         help="The output directory where the model predictions and checkpoints will be written.", )
 
     # Other parameters
@@ -362,12 +362,12 @@ def main():
     parser.add_argument("--eval_max_seq_length",default=512,type=int,
                         help="The maximum total input sequence length after tokenization. Sequences longer "
                              "than this will be truncated, sequences shorter will be padded.", )
-    parser.add_argument("--do_train", action="store_true", help="Whether to run training.")
-    parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
-    parser.add_argument("--do_predict", action="store_true", help="Whether to run predictions on the test set.")
+    parser.add_argument("--do_train",default=None, type=bool,help="Whether to run training.")
+    parser.add_argument("--do_eval", default=None, type=bool, help="Whether to run eval on the dev set.")
+    parser.add_argument("--do_predict", default=None, type=bool, help="Whether to run predictions on the test set.")
     parser.add_argument("--evaluate_during_training",action="store_true",
                         help="Whether to run evaluation during training at each logging step.", )
-    parser.add_argument("--do_lower_case", action="store_true",
+    parser.add_argument("--do_lower_case", default=None, type=bool,
                         help="Set this flag if you are using an uncased model.")
 
     parser.add_argument("--per_gpu_train_batch_size", default=8, type=int, help="Batch size per GPU/CPU for training.")
@@ -392,7 +392,7 @@ def main():
     parser.add_argument('--predict_all_checkpoints',action="store_true",
                         help="Predict all checkpoints starting with the same prefix as model_name ending and ending with step number",)
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
-    parser.add_argument("--overwrite_output_dir", action="store_true",
+    parser.add_argument("--overwrite_output_dir", default=None,type=bool,
                         help="Overwrite the content of the output directory")
     parser.add_argument("--overwrite_cache", action="store_true",
                         help="Overwrite the cached training and evaluation sets")
@@ -406,6 +406,29 @@ def main():
     parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
     parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
     args = parser.parse_args()
+
+    # 参数修改
+    args.task_name = 'cner'
+    args.model_type = 'bert'
+    args.model_name_or_path = '/home/xyf/models/chinese/bert/pytorch/bert-base-chinese'
+    args.do_train = True
+    args.do_eval = True
+    args.do_predict = True
+    args.do_lower_case = True
+    args.data_dir = '/home/xyf/桌面/Disk/NLP语料/实体识别/data'
+    args.train_max_seq_length = 150
+    args.eval_max_seq_length = 150
+    args.per_gpu_train_batch_size = 4
+    args.per_gpu_eval_batch_size = 4
+    args.learning_rate = 2e-5
+    args.num_train_epochs = 5.0
+    args.logging_steps = 300
+    args.saving_steps = 300
+    args.output_dir = './outputs'
+    args.overwrite_output_dir = True
+    args.seed = 42
+
+
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
     args.output_dir = args.output_dir + '{}'.format(args.model_type)

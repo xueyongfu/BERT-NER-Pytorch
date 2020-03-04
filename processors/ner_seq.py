@@ -160,21 +160,19 @@ class CnerProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(self._read_text(os.path.join(data_dir, "train.char.bmes")), "train")
+        return self._create_examples(self._read_text(os.path.join(data_dir, "train.txt")), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(self._read_text(os.path.join(data_dir, "dev.char.bmes")), "dev")
+        return self._create_examples(self._read_text(os.path.join(data_dir, "dev.txt")), "dev")
 
     def get_test_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(self._read_text(os.path.join(data_dir, "test.char.bmes")), "test")
+        return self._create_examples(self._read_text(os.path.join(data_dir, "test.txt")), "test")
 
     def get_labels(self):
         """See base class."""
-        return ["X",'B-CONT','B-EDU','B-LOC','B-NAME','B-ORG','B-PRO','B-RACE','B-TITLE',
-                'I-CONT','I-EDU','I-LOC','I-NAME','I-ORG','I-PRO','I-RACE','I-TITLE',
-                'O','S-NAME','S-ORG','S-RACE',"[CLS]", "[SEP]"]
+        return ['B-LOC', 'B-ORG', 'B-PER', 'I-LOC', 'I-ORG', 'I-PER', 'O', '[CLS]', '[SEP]']
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -231,6 +229,7 @@ class CluenerProcessor(DataProcessor):
             labels = line['labels']
             examples.append(InputExample(guid=guid, text_a=text_a, labels=labels))
         return examples
+
 ner_processors = {
     "cner": CnerProcessor,
     'cluener':CluenerProcessor

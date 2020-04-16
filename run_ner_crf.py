@@ -396,13 +396,13 @@ def main():
                         help="Predict all checkpoints starting with the same prefix as model_name ending and ending with step number",)
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
     parser.add_argument("--overwrite_output_dir", default=None,type=bool,
-                        help="Overwrite the content of the output directory")
+                        help="Overwrite the content of the output directory 将输出目录覆写")
     parser.add_argument("--overwrite_cache", action="store_true",
                         help="Overwrite the cached training and evaluation sets")
     parser.add_argument("--seed", type=int, default=42, help="random seed for initialization")
     parser.add_argument("--fp16",action="store_true",
                         help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit",)
-    parser.add_argument("--fp16_opt_level",type=str,default="O1",
+    parser.add_argument("--fp16_opt_level",type=str,default="O1",\
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                              "See details at https://nvidia.github.io/apex/amp.html",)
     parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
@@ -411,14 +411,15 @@ def main():
     args = parser.parse_args()
 
     # 参数修改
+    # 主要必须修改labels, 位置在processors文件夹ner_seq文件中
     args.task_name = 'cner'
     args.model_type = 'bert'
-    args.model_name_or_path = '/home/xyf/models/chinese/bert/pytorch/bert-base-chinese'
+    args.model_name_or_path = '/root/models/chinese/bert/pytorch/bert-base-chinese'
     args.do_train = True
     args.do_eval = True
     args.do_predict = True
     args.do_lower_case = True
-    args.data_dir = '/home/xyf/桌面/Disk/NLP语料/实体识别/data'
+    args.data_dir = '/root/NLP语料/实体识别/data'
     args.train_max_seq_length = 150
     args.eval_max_seq_length = 150
     args.per_gpu_train_batch_size = 4
@@ -426,15 +427,16 @@ def main():
     args.learning_rate = 2e-5
     args.num_train_epochs = 5.0
     args.logging_steps = 300
-    args.saving_steps = 300
+    args.saving_steps = 600
     args.output_dir = './outputs'
     args.overwrite_output_dir = True
     args.seed = 42
 
 
+
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
-    args.output_dir = args.output_dir + '{}'.format(args.model_type)
+    args.output_dir = os.path.join(args.output_dir ,args.model_type)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
     init_logger(log_file=args.output_dir + '/{}-{}-{}.log'.format(args.model_type, args.task_name,
@@ -451,6 +453,7 @@ def main():
         print("Waiting for debugger attach")
         ptvsd.enable_attach(address=(args.server_ip, args.server_port), redirect_output=True)
         ptvsd.wait_for_attach()
+
     # Setup CUDA, GPU & distributed training
     if args.local_rank == -1 or args.no_cuda:
         device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -464,6 +467,7 @@ def main():
     logger.warning(
                 "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
                 args.local_rank,device,args.n_gpu, bool(args.local_rank != -1),args.fp16,)
+
     # Set seed
     seed_everything(args.seed)
     # Prepare NER task
@@ -479,6 +483,7 @@ def main():
     # Load pretrained model and tokenizer
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
+
     args.model_type = args.model_type.lower()
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path,
@@ -486,7 +491,7 @@ def main():
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path,
                                                 do_lower_case=args.do_lower_case,
                                                 cache_dir=args.cache_dir if args.cache_dir else None,)
-    model = model_class.from_pretrained(args.model_name_or_path,from_tf=bool(".ckpt" in args.model_name_or_path),
+    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool(".ckpt" in args.model_name_or_path),
                                         config=config,cache_dir=args.cache_dir if args.cache_dir else None,
                                         label2id=args.label2id,device=args.device)
     # 模型可视化
@@ -517,6 +522,7 @@ def main():
         tokenizer.save_vocabulary(args.output_dir)
         # Good practice: save your training arguments together with the trained model
         torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
+
     # Evaluation
     results = {}
     if args.do_eval and args.local_rank in [-1, 0]:

@@ -170,10 +170,14 @@ class CnerProcessor(DataProcessor):
         """See base class."""
         return self._create_examples(self._read_text(os.path.join(data_dir, "test.txt")), "test")
 
+    def get_predict_examples(self, lines):
+        """See base class."""
+        return self._create_examples(lines, "test")
+
     def get_labels(self):
         """See base class."""
-        return ['B-LOC', 'B-ORG', 'B-PER', 'I-LOC', 'I-ORG', 'I-PER', 'O', '[CLS]', '[SEP]']
-        # return  ['[CLS]', '[SEP]', 'O', 'B-ENT', 'I-ENT']
+        # return ['B-LOC', 'B-ORG', 'B-PER', 'I-LOC', 'I-ORG', 'I-PER', 'O', '[CLS]', '[SEP]']
+        return  ['[CLS]', '[SEP]', 'O', 'B-ENT', 'I-ENT']
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""

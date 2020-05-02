@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="root@172.18.1.91:22">
+  <component name="PublishConfigData" autoUpload="Always" serverName="root@172.18.1.91:22_torch">
     <serverData>
-      <paths name="root@172.18.1.91:22">
+      <paths name="root@172.18.1.91:22_torch">
         <serverdata>
           <mappings>
             <mapping deploy="debug/BERT-NER-Pytorch" local="$PROJECT_DIR$" web="/" />

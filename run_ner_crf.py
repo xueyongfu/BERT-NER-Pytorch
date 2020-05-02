@@ -2,9 +2,9 @@ import argparse
 import glob
 import logging
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import json
 import time
-from tensorboardX import SummaryWriter
 
 import torch
 import torch.nn as nn
@@ -24,6 +24,11 @@ from processors.ner_seq import convert_examples_to_features
 from processors.ner_seq import ner_processors as processors
 from processors.ner_seq import collate_fn
 from metrics.ner_metrics import SeqEntityScore
+
+from tensorboardX import SummaryWriter
+writer = None
+global_step = 0
+
 
 ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig,)), ())
 
@@ -100,6 +105,7 @@ def train(args, train_dataset, model, tokenizer):
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     logger.info("  Total optimization steps = %d", t_total)
 
+    global global_step
     global_step = 0
     steps_trained_in_current_epoch = 0
     # Check if continuing training from a checkpoint
@@ -141,6 +147,7 @@ def train(args, train_dataset, model, tokenizer):
             else:
                 loss.backward()
             pbar(step, {'loss': loss.item()})
+
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 if args.fp16:
@@ -152,6 +159,8 @@ def train(args, train_dataset, model, tokenizer):
                 model.zero_grad()
                 global_step += 1
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
+                    # 可视化
+                    writer.add_scalar('train_loss', loss.item(), global_step)
                     # Log metrics
                     print(" ")
                     if args.local_rank == -1:
@@ -239,6 +248,11 @@ def evaluate(args, model, tokenizer, prefix=""):
         logger.info("******* %s results ********"%key)
         info = "-".join([f' {key}: {value:.4f} ' for key, value in entity_info[key].items()])
         logger.info(info)
+
+    # 可视化
+    for key,value in results.items():
+        writer.add_scalar('eval_'+key, value, global_step)
+
     return results
 
 def predict(args, model, tokenizer, prefix=""):
@@ -333,8 +347,6 @@ def load_and_cache_examples(args, task, tokenizer, data_type='train'):
     return dataset
 
 def main():
-    writer = SummaryWriter(comment='bert', log_dir='./outputs')
-
     parser = argparse.ArgumentParser()
 
     # Required parameters
@@ -365,12 +377,12 @@ def main():
     parser.add_argument("--eval_max_seq_length",default=512,type=int,
                         help="The maximum total input sequence length after tokenization. Sequences longer "
                              "than this will be truncated, sequences shorter will be padded.", )
-    parser.add_argument("--do_train",default=None, type=bool,help="Whether to run training.")
-    parser.add_argument("--do_eval", default=None, type=bool, help="Whether to run eval on the dev set.")
-    parser.add_argument("--do_predict", default=None, type=bool, help="Whether to run predictions on the test set.")
+    parser.add_argument("--do_train",action="store_true", help="Whether to run training.")
+    parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
+    parser.add_argument("--do_predict", action="store_true", help="Whether to run predictions on the test set.")
     parser.add_argument("--evaluate_during_training",action="store_true",
                         help="Whether to run evaluation during training at each logging step.", )
-    parser.add_argument("--do_lower_case", default=None, type=bool,
+    parser.add_argument("--do_lower_case", action="store_true",
                         help="Set this flag if you are using an uncased model.")
 
     parser.add_argument("--per_gpu_train_batch_size", default=8, type=int, help="Batch size per GPU/CPU for training.")
@@ -395,7 +407,7 @@ def main():
     parser.add_argument('--predict_all_checkpoints',action="store_true",
                         help="Predict all checkpoints starting with the same prefix as model_name ending and ending with step number",)
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
-    parser.add_argument("--overwrite_output_dir", default=None,type=bool,
+    parser.add_argument("--overwrite_output_dir", action="store_true",
                         help="Overwrite the content of the output directory 将输出目录覆写")
     parser.add_argument("--overwrite_cache", action="store_true",
                         help="Overwrite the cached training and evaluation sets")
@@ -408,30 +420,35 @@ def main():
     parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
     parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
     parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
+    parser.add_argument("--log_name", type=str, default="", help="log info")
     args = parser.parse_args()
 
     # 参数修改
     # 主要必须修改labels, 位置在processors文件夹ner_seq文件中
-    args.task_name = 'cner'
-    args.model_type = 'bert'
-    args.model_name_or_path = '/root/models/chinese/bert/pytorch/bert-base-chinese'
-    args.do_train = True
-    args.do_eval = True
-    args.do_predict = True
-    args.do_lower_case = True
-    args.data_dir = '/root/NLP语料/实体识别/data'
-    args.train_max_seq_length = 150
-    args.eval_max_seq_length = 150
-    args.per_gpu_train_batch_size = 4
-    args.per_gpu_eval_batch_size = 4
-    args.learning_rate = 2e-5
-    args.num_train_epochs = 5.0
-    args.logging_steps = 300
-    args.saving_steps = 600
-    args.output_dir = './outputs'
-    args.overwrite_output_dir = True
-    args.seed = 42
+    # args.task_name = 'cner'
+    # args.model_type = 'bert'
+    # args.model_name_or_path = '/root/models/chinese/bert/pytorch/bert-base-chinese'
+    # args.do_train = True
+    # args.do_eval = True
+    # args.do_predict = True
+    # args.do_lower_case = True
+    # args.data_dir = '/root/A/违法主体识别/train_data'
+    # args.train_max_seq_length = 200
+    # args.eval_max_seq_length = 200
+    # args.per_gpu_train_batch_size = 8
+    # args.per_gpu_eval_batch_size = 8
+    # args.learning_rate = 2e-5
+    # args.num_train_epochs = 10
+    # args.logging_steps = 300
+    # args.save_steps = 300
+    # args.output_dir = './outputs'
+    # args.overwrite_output_dir = True
+    # args.seed = 42
+    # args.predict_all_checkpoints = True
+    # args.log_name = args.model_type+'_1'
 
+    global writer
+    writer = SummaryWriter(comment=args.log_name)
 
 
     if not os.path.exists(args.output_dir):
@@ -439,8 +456,8 @@ def main():
     args.output_dir = os.path.join(args.output_dir ,args.model_type)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
-    init_logger(log_file=args.output_dir + '/{}-{}-{}.log'.format(args.model_type, args.task_name,
-                                                                  time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())))
+    # init_logger(log_file=args.output_dir + '/{}-{}-{}.log'.format(args.model_type, args.task_name,
+    #                                                               time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())))
     if os.path.exists(args.output_dir) and os.listdir(
             args.output_dir) and args.do_train and not args.overwrite_output_dir:
         raise ValueError(
@@ -555,7 +572,8 @@ def main():
             checkpoints = list(
                 os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
             logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
-            checkpoints = [x for x in checkpoints if x.split('-')[-1] == str(args.predict_checkpoints)]
+            # checkpoints = [x for x in checkpoints if x.split('-')[-1] == str(args.predict_checkpoints)]
+            checkpoints = [x for x in checkpoints ]
         logger.info("Predict the following checkpoints: %s", checkpoints)
         for checkpoint in checkpoints:
             prefix = checkpoint.split('/')[-1] if checkpoint.find('checkpoint') != -1 else ""
